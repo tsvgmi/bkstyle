@@ -1,0 +1,160 @@
+#!/usr/bin/env ruby
+require 'gli'
+#begin # XXX: Remove this begin/rescue before distributing your app
+require 'bkstyle'
+#rescue LoadError
+  #STDERR.puts "In development, you need to use `bundle exec bin/bkstyle` to run your app"
+  #STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
+  #STDERR.puts "Feel free to remove this message from bin/bkstyle now"
+  #exit 64
+#end
+
+include GLI::App
+
+program_desc 'Describe your application here'
+
+version Bkstyle::VERSION
+
+subcommand_option_handling :normal
+arguments :strict
+
+desc 'Force mode.  Overwrite if needed'
+switch [:f, :force], negatable:false
+
+desc 'Output format'
+flag [:o, :ofmt], must_match: /^(json|yaml)$/i
+
+desc 'Test run only'
+switch [:n, :dryrun], negatable:false
+
+desc 'Manage Style Folder'
+command :folder do |c|
+  c.desc 'Alphabetize folder so it is smaller to work with'
+  c.arg_name 'source_dir'
+  c.command :alphabetize do |c|
+    c.desc 'Copy file rather than move'
+    c.switch [:c, :copy], negatable:false
+
+    c.desc 'Recursive source dir scan (target must not be specified)'
+    c.switch [:r, :recursive], negatable:false
+
+    c.desc 'Target dir to organize to'
+    c.flag [:t, :target]
+
+    c.desc 'File extension to process'
+    c.flag [:x, :extension]
+
+    c.desc 'Source Mode'
+    c.flag [:m, :mode]
+
+    c.action do |global_options,options,args|
+      if options[:recursive] && !options[:target]
+        raise "You must specify target dir for recursive option"
+      end
+      l_options = global_options.clone
+      l_options.update(options)
+      alphabetize_dir(args[0], l_options)
+    end
+  end
+
+  c.desc 'Split folder so it is smaller to work with'
+  c.arg_name 'source_dir'
+  c.command :split do |c|
+    c.desc 'Copy file rather than move'
+    c.switch [:c, :copy], negatable:false
+
+    c.desc 'Recursive source dir scan (target must not be specified)'
+    c.switch [:r, :recursive], negatable:false
+
+    c.desc 'Target dir to organize to'
+    c.flag [:t, :target]
+
+    c.desc 'Source Mode'
+    c.flag [:m, :src_mode],
+      must_match: ['ari', 'ari.n', 'cali', 'cali.n']
+
+    c.action do |global_options,options,args|
+      if options[:recursive] && !options[:target]
+        raise "You must specify target dir for recursive option"
+      end
+      loptions = cli_options(global_options, options)
+      Folder.new(args[0], loptions).split_dir
+    end
+  end
+end
+
+desc 'Manage Performance (UPS) File'
+command :ups do |c|
+
+  c.desc 'Output File'
+  c.flag [:o, :ofile]
+
+  c.arg_name 'file_name'
+  c.arg_name 'target_name'
+  c.command :clone do |clone|
+    clone.desc "Clone a UPS file"
+    clone.action do |global_options,options,args|
+      sfile = args[0]
+      dfile = args[1]
+      global_options.update(options)
+      UpsFile.new(sfile, global_options).clone(dfile)
+    end
+  end
+
+  c.arg_name 'file_name'
+  c.command :list do |list|
+    list.desc "List the UPS content"
+    list.action do |global_options,options,args|
+      sfile = args[0]
+      global_options.update(options)
+      UpsFile.new(sfile, global_options).list
+    end
+  end
+
+  c.arg_name 'file_name'
+  c.arg_name '[order.]new_name', :multiple
+  c.command :rename do |rename|
+    rename.desc "Rename the UPS content"
+    rename.action do |global_options,options,args|
+      sfile    = args.shift
+      loptions = cli_options(global_options, options)
+      UpsFile.new(sfile, loptions).rename(*args)
+    end
+  end
+
+  c.arg_name 'file_name'
+  c.arg_name 'edit_file'
+  c.command :bedit do |bedit|
+    bedit.desc "Batch Edit the UPS content"
+    bedit.action do |global_options,options,args|
+      sfile    = args.shift
+      edfile   = args.shift
+      loptions = cli_options(global_options, options)
+      ufile = UpsFile.new(sfile, loptions)
+      ufile.bedit(edfile)
+    end
+  end
+end
+
+pre do |global,command,options,args|
+  # Pre logic here
+  # Return true to proceed; false to abort and not call the
+  # chosen command
+  # Use skips_pre before a command to skip this block
+  # on that command only
+  true
+end
+
+post do |global,command,options,args|
+  # Post logic here
+  # Use skips_post before a command to skip this
+  # block on that command only
+end
+
+on_error do |exception|
+  # Error logic here
+  # return false to skip default error handling
+  true
+end
+
+exit run(ARGV)
