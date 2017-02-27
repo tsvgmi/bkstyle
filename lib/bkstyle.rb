@@ -11,11 +11,12 @@ end
 # you just need to require this one file in your bin file
 
 class Folder
-  def initialize(srcdir, options={})
-    @srcdir  = srcdir
-    @tgtdir  = options[:target] || srcdir
-    @options = options
-    case @options[:src_mode]
+  def initialize(srcdir, src_mode, options={})
+    @srcdir   = srcdir
+    @tgtdir   = options[:target] || srcdir
+    @src_mode = src_mode
+    @options  = options
+    case @src_mode
     when /^(ari|cali)/
       @extension = 'mid'
     else
@@ -54,27 +55,37 @@ class Folder
   def get_dfilename(f)
     dir, file = File.split(f)
     dd = nil
-    case @options[:src_mode]
+    case @src_mode
     when 'ari.n'
-      if f !~ /(\d+).mid/
+      if file !~ /(\d+).mid/
         return nil
       end
       fno = $1
       lf  = fno[0..2]
       dd  = "#{@tgtdir}/#{lf}"
     when 'cali.n'
-      if f !~ /^(\d+)\s+/
+      if file =~ /^(\d+)\s+-/
+        fno = $1
+      elsif file =~ /\((\d+)\)\.mid/
+        fno, song = $1, $`
+        song = song.sub(/_+$/, '')
+        file = "#{fno} - #{song}.mid"
+      else
         return nil
       end
-      fno = $1
       lf  = fno[0..3]
       dd  = "#{@tgtdir}/#{lf}"
     when 'cali'
-      fs   = file.split(' ', 3)
-      lf   = fs[2][0]
-      dd   = "#{@tgtdir}/#{lf}"
-      song = fs[2].sub(/\.mid$/, '')
-      file = "#{song} - #{fs[0]}.mid"
+      if file =~ /^\d+ - /
+        fs   = file.split(' ', 3)
+        lf   = fs[2][0]
+        dd   = "#{@tgtdir}/#{lf}"
+        song = fs[2].sub(/\.mid$/, '')
+        file = "#{song} - #{fs[0]}.mid"
+      else
+        lf   = file[0]
+        dd   = "#{@tgtdir}/#{lf}"
+      end
     else
       fc = file.sub(/^[^A-Z0-9]/io, '')
           .sub(/^A\s+/io, '')[0].upcase

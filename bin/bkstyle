@@ -1,17 +1,10 @@
 #!/usr/bin/env ruby
 require 'gli'
-#begin # XXX: Remove this begin/rescue before distributing your app
 require 'bkstyle'
-#rescue LoadError
-  #STDERR.puts "In development, you need to use `bundle exec bin/bkstyle` to run your app"
-  #STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
-  #STDERR.puts "Feel free to remove this message from bin/bkstyle now"
-  #exit 64
-#end
 
 include GLI::App
 
-program_desc 'Describe your application here'
+program_desc 'Tool to manage style/performance files'
 
 version Bkstyle::VERSION
 
@@ -31,6 +24,8 @@ desc 'Manage Style Folder'
 command :folder do |c|
   c.desc 'Split folder so it is smaller to work with'
   c.arg_name 'source_dir'
+  c.desc 'Source mode (ari, ari.n, cali, cali.n)'
+  c.arg_name 'mode'
   c.command :split do |c|
     c.desc 'Copy file rather than move'
     c.switch [:c, :copy], negatable:false
@@ -41,16 +36,14 @@ command :folder do |c|
     c.desc 'Target dir to organize to'
     c.flag [:t, :target]
 
-    c.desc 'Source Mode'
-    c.flag [:m, :src_mode],
-      must_match: ['ari', 'ari.n', 'cali', 'cali.n']
-
     c.action do |global_options,options,args|
       if options[:recursive] && !options[:target]
         raise "You must specify target dir for recursive option"
       end
       loptions = cli_options(global_options, options)
-      Folder.new(args[0], loptions).split_dir
+      src_dir = args.shift
+      mode    = args.shift
+      Folder.new(src_dir, mode, loptions).split_dir
     end
   end
 end
