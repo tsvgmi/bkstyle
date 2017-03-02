@@ -26,17 +26,17 @@ command :folder do |c|
   c.arg_name 'source_dir'
   c.desc 'Source mode (ari, ari.n, cali, cali.n)'
   c.arg_name 'mode'
-  c.command :split do |c|
-    c.desc 'Copy file rather than move'
-    c.switch [:c, :copy], negatable:false
+  c.command :split do |sp|
+    sp.desc 'Copy file rather than move'
+    sp.switch [:c, :copy], negatable:false
 
-    c.desc 'Recursive source dir scan (target must not be specified)'
-    c.switch [:r, :recursive], negatable:false
+    sp.desc 'Recursive source dir scan (target must not be specified)'
+    sp.switch [:r, :recursive], negatable:false
 
-    c.desc 'Target dir to organize to'
-    c.flag [:t, :target]
+    sp.desc 'Target dir to organize to'
+    sp.flag [:t, :target]
 
-    c.action do |global_options,options,args|
+    sp.action do |global_options,options,args|
       if options[:recursive] && !options[:target]
         raise "You must specify target dir for recursive option"
       end
@@ -46,11 +46,32 @@ command :folder do |c|
       Folder.new(src_dir, mode, loptions).split_dir
     end
   end
+
+  c.desc 'Fix midi file (transfer through midisox)'
+  c.arg_name 'source_dir'
+  c.desc 'Source mode (ari, ari.n, cali, cali.n)'
+  c.arg_name 'mode'
+  c.command :midi_fix do |mi|
+    mi.desc 'Recursive source dir scan (target must not be specified)'
+    mi.switch [:r, :recursive], negatable:false
+
+    mi.desc 'Target dir to organize to'
+    mi.flag [:t, :target]
+
+    mi.action do |global_options,options,args|
+      if !options[:target]
+        raise "You must specify target dir option"
+      end
+      loptions = cli_options(global_options, options)
+      src_dir  = args.shift
+      mode    = args.shift
+      Folder.new(src_dir, mode, loptions).midi_fix
+    end
+  end
 end
 
 desc 'Manage Performance (UPS) File'
 command :ups do |c|
-
   c.desc 'Output File'
   c.flag [:o, :ofile]
 

@@ -28,6 +28,23 @@ class Folder
     FileUtils.mkdir_p(@tgtdir, @runopt) unless test(?d, @tgtdir)
   end
 
+  # Strip out the VN accent
+  def to_ascii(string)
+    require 'unidecode'
+
+    begin
+      #string.unpack("U*").map{|c|c.chr}.join
+      #Iconv.iconv("US-ASCII//TRANSLIT", "UTF-8", string).first
+      Unidecoder.decode(string).gsub("[?]", "").gsub(/`/, "'").strip
+      
+      
+    rescue => errmsg
+      p errmsg
+      string
+    end
+  end
+
+  # Retrieve a list of files to move
   def get_files
     if @options[:recursive]
       `find "#{@srcdir}" -name '*.#{@extension}'`.split("\n")
@@ -95,7 +112,7 @@ class Folder
     end
     return nil unless dd
     FileUtils.mkdir_p(dd, @runopt) unless test(?d, dd)
-    "#{dd}/#{file}"
+    "#{dd}/#{to_ascii(file)}"
   end
 
   def split_dir
@@ -111,6 +128,24 @@ class Folder
         FileUtils.move(f, dfile, @runopt)
       end
     end
+  end
+
+  def midi_fix
+    map_target
+    rundir = File.dir_name(__FILE__)
+    ENV['PYLIB'] ||= ""
+    ENV['PYLIB'] += ":#{rundir}/../PYLIB"
+    get_files.each do |f|
+      dfile = get_dfilename(f)
+      if !@options[:force] && test(?s, dfile)
+        logger.info("#{dfile} exist.  Skip")
+        next
+      end
+      command = "python3 #{rundir}/../PYLIB/midisox \"#{f}\" \"#{dfile}\""
+      logger.info command
+      system(command)
+    end
+    true
   end
 end
 
