@@ -16,6 +16,7 @@ class Folder
     @tgtdir   = options[:target] || srcdir
     @src_mode = src_mode
     @options  = options
+    @logger   = Logger.new(STDERR)
     case @src_mode
     when /^(ari|cali)/
       @extension = 'mid'
@@ -74,12 +75,13 @@ class Folder
     dd = nil
     case @src_mode
     when 'ari.n'
-      if file !~ /(\d+).mid/
+      if file !~ /_(\d+).mid/
         return nil
       end
-      fno = $1
-      lf  = fno[0..2]
-      dd  = "#{@tgtdir}/#{lf}"
+      song, fno = $`, $1
+      lf   = fno[0..2]
+      file = "#{fno} - #{song}.mid"
+      dd   = "#{@tgtdir}/#{lf}"
     when 'cali.n'
       if file =~ /^(\d+)\s+-/
         fno = $1
@@ -132,17 +134,17 @@ class Folder
 
   def midi_fix
     map_target
-    rundir = File.dir_name(__FILE__)
+    rundir = File.dirname(__FILE__)
     ENV['PYLIB'] ||= ""
     ENV['PYLIB'] += ":#{rundir}/../PYLIB"
     get_files.each do |f|
       dfile = get_dfilename(f)
       if !@options[:force] && test(?s, dfile)
-        logger.info("#{dfile} exist.  Skip")
+        @logger.info("#{dfile} exist.  Skip")
         next
       end
       command = "python3 #{rundir}/../PYLIB/midisox \"#{f}\" \"#{dfile}\""
-      logger.info command
+      @logger.info command
       system(command)
     end
     true
